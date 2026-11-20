@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>キッチンシフト作成</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="theme-color" content="#2f5d8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="シフト作成">
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--ink:#1d1d1b;--sub:#6b6a66;--line:#d9d7d0;--acc:#2f5d8a;--accS:#e6eef6;--warn:#b5462f;--ok:#2e7d4f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:15px;line-height:1.5}
+header{padding:18px 16px 6px}
+header h1{font-size:20px;margin:0}
+header p{margin:4px 0 0;color:var(--sub);font-size:13px}
+main{padding:8px 12px 80px;max-width:900px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+.card h2{font-size:16px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.num{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-size:12px;align-items:center;justify-content:center}
+.hint{color:var(--sub);font-size:12.5px;margin:4px 0 8px}
+label.row{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+input[type=date],input[type=number],input[type=text]{font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+input[type=number]{width:72px}
+button{font-size:15px;border-radius:10px;border:1px solid var(--line);background:#fff;padding:10px 14px;color:var(--ink)}
+button.primary{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600;width:100%;padding:14px;font-size:17px}
+button.small{padding:6px 10px;font-size:13px}
+button:disabled{opacity:.5}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:8px}
+table.grid{border-collapse:collapse;font-size:13px}
+table.grid th,table.grid td{border:1px solid var(--line);text-align:center;min-width:36px;height:36px;padding:0}
+table.grid th{background:#faf9f6;font-weight:600;font-size:12px;line-height:1.2}
+table.grid th.sun,table.grid td.sun{background:#fbeeee}
+table.grid th.sat,table.grid td.sat{background:#eef3fb}
+table.grid .nm{position:sticky;left:0;background:#fff;z-index:1;min-width:56px;font-weight:600;padding:0 6px;white-space:nowrap}
+table.grid td.cell{cursor:pointer;font-size:16px;user-select:none}
+table.grid td.x{color:var(--warn);font-weight:700}
+table.grid td.w{color:var(--ok);font-weight:700;background:#e8f4ec}
+table.grid td.mw{background:var(--accS)}
+.names{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.names label{display:flex;align-items:center;gap:6px;font-size:13px}
+.names input{width:100%}
+details summary{cursor:pointer;font-weight:600}
+.status{margin:10px 0 0;font-size:14px;color:var(--sub);min-height:20px}
+.checks{list-style:none;padding:0;margin:8px 0 0;font-size:14px}
+.checks li{padding:3px 0}
+.ok{color:var(--ok)}.ng{color:var(--warn)}
+#resultImg{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;display:block}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;background:var(--accS);font-size:12px;color:var(--acc)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px}
+.bar>div{height:100%;width:0;background:var(--acc);transition:width .2s}
+.hidden{display:none!important}
+.getsudo{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--accS)}
+.getsudo-name{font-weight:700;color:var(--acc);font-size:16px}
+.modes{display:flex;gap:8px;margin:4px 0 10px}
+.modes button{flex:1;padding:12px 6px;font-size:15px;font-weight:600}
+.modes button.on{border-width:2px}
+#modeX.on{background:#fbecea;border-color:var(--warn);color:var(--warn)}
+#modeW.on{background:#e8f4ec;border-color:var(--ok);color:var(--ok)}
+#modeE.on{background:#eee;border-color:#888}
+.copied{display:inline-block;margin-left:8px;color:var(--ok);font-weight:600;font-size:14px}
+.filebtn{position:relative;display:inline-block;overflow:hidden;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:#fff;font-size:13px}
+.filebtn input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:100px}
+</style>
+</head>
+<body>
+<header>
+<h1>キッチン シフト作成</h1>
+<p>期間と希望休を入れて「シフトを作成」を押すと、決めたルールどおりに自動で組みます。</p>
+</header>
+<main>
+
+<section class="card">
+<h2><span class="num">1</span>期間</h2>
+<label class="row">開始日 <input type="date" id="startDate"></label>
+<label class="row">終了日 <input type="date" id="endDate"></label>
+<div class="hint" id="periodInfo"></div>
+<div class="getsudo">
+ <div><span id="getsudoLabel" class="getsudo-name"></span></div>
+ <label class="row">正社員（1〜5）の休み <input type="number" id="offMonth" min="1" max="20"> 日</label>
+ <div class="hint" id="offMonthHint"></div>
+</div>
+</section>
+
+<section class="card">
+<h2><span class="num">2</span>前回シフトの最後の7日間 <span class="pill">任意</span></h2>
+<div class="hint">連勤やまかない当番の間隔を、前回から続けて計算するために使います。写真を読み込むか、マスをタップして入力してください（空欄は休み扱い）。</div>
+<div class="btns" id="photoBox">
+  <div class="hidden filebtn" id="photoLabel"><span>📷 前回シフトの写真を読み込む</span><input type="file" id="photo" accept="image/*" aria-label="前回シフトの写真を読み込む"></div>
+  <button class="small" id="clearPrev">クリア</button>
+</div>
+<div class="status" id="photoStatus"></div>
+<details open style="margin-top:8px"><summary>ChatGPTなど、ほかのAIで写真を読み取る</summary>
+<ol class="hint" style="padding-left:18px;margin:8px 0">
+<li>「読み取り用の指示をコピー」を押す</li>
+<li>ChatGPT（無料でOK）に前回シフトの写真を添付し、コピーした指示を貼り付けて送る</li>
+<li>返ってきた答え（{ } で囲まれた部分）を全部コピーして、下の欄に貼り付け「取り込む」を押す</li>
+</ol>
+<div class="btns" style="margin-top:0;align-items:center"><button class="small" id="copyPrompt">📋 読み取り用の指示をコピー</button><span id="copyMsg" class="copied"></span></div>
+<textarea id="pasteBox" rows="4" placeholder="ここにAIの答えを貼り付け" style="width:100%;margin-top:8px;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:8px"></textarea>
+<div class="btns" style="margin-top:6px"><button class="small" id="applyPaste">取り込む</button></div>
+<div class="status" id="pasteStatus"></div>
+</details>
+<div class="scroll" style="margin-top:8px"><table class="grid" id="prevGrid"></table></div>
+<div class="hint">タップで 空欄 → B → Ⓑ（まかない）→ A → ／ と切り替わります。</div>
+</section>
+
+<section class="card">
+<h2><span class="num">3</span>希望休・出勤指定</h2>
+<div class="hint">下のボタンで入れたいものを選んでから、マスをタップしてください。同じものが入ったマスをもう一度タップすると消えます。青い列は月〜水です。</div>
+<div class="modes"><button id="modeX" class="on">× 希望休</button><button id="modeW">出 出勤指定</button><button id="modeE">消す</button></div>
+<div class="scroll"><table class="grid" id="hopeGrid"></table></div>
+<div class="btns"><button class="small" id="clearHope">希望休・出勤指定をすべて消す</button></div>
+</section>
+
+<section class="card">
+<details>
+<summary>メンバー名・ルール設定</summary>
+<div class="hint" style="margin-top:8px">名前は表示用です（空欄なら番号を表示）。</div>
+<div class="names" id="names"></div>
+<div style="margin-top:12px">
+<div class="hint">正社員（1〜5）の休み日数は「1. 期間」の月度ごとの欄で設定します。</div>
+<label class="row">7の休み <input type="number" id="off7min" min="4" max="14"> 〜 <input type="number" id="off7max" min="4" max="14"> 日</label>
+<label class="row">1・2の連勤上限 <input type="number" id="run12" min="3" max="7"> 日</label>
+<label class="row">3〜5・7の連勤上限 <input type="number" id="run35" min="4" max="8"> 日（できれば1日少なく）</label>
+<label class="row">B（日勤）の最低人数 <input type="number" id="minB" min="1" max="6"> 人</label>
+</div>
+<div class="hint" style="margin-top:8px">そのほかのルール（固定）：月〜水は1か2のどちらか1人だけ出勤／金土日は1か2が必ず出勤／4か5は毎日どちらか出勤／朝食番Aは月火＝6、水〜日＝8、8が休みの日は7がA／まかない当番は均等・中2日以上空ける（中1日は1人月1回まで）・1回の連勤で2回まで／できるだけ2連休</div>
+</details>
+</section>
+
+<button class="primary" id="run">シフトを作成</button>
+<div class="bar hidden" id="barWrap"><div id="bar"></div></div>
+<div class="status" id="runStatus"></div>
+
+<section class="card hidden" id="resultCard">
+<h2>作成結果</h2>
+<div class="hint">画像を長押しすると保存できます。「Excelで保存」で編集できる表（.xlsx）も保存できます。iPhoneではボタンを押すと共有メニューが出るので、「画像を保存」や「ファイルに保存」を選んでください。</div>
+<img id="resultImg" alt="シフト表">
+<div class="btns">
+  <button class="small hidden" id="dlBtn">画像をダウンロード</button>
+  <button class="small hidden" id="xlsxBtn">Excelで保存</button>
+  <button class="small" id="copyBtn">表をテキストでコピー</button>
+  <button class="small" id="rerun">別の案を作る</button>
+</div>
+<ul class="checks" id="checks"></ul>
+</section>
+
+</main>
+
+<script>
+(function(){
+const MEMBERS=8;
+const WD="月火水木金土日";
+const PREV_CYCLE=["","B","Ⓑ","A","／"];
+const DEF={start:null,end:null,offByMonth:{"2026-11":9,"2026-12":10,"2027-01":6,"2027-02":10},names:Array(MEMBERS).fill(""),hope:{},prev:{},offReg:9,off7min:8,off7max:10,run12:5,run35:7,minB:3};
+let st;
+function load(){try{st=Object.assign({},DEF,JSON.parse(localStorage.getItem("kitchenShift")||"{}"))}catch(e){st=Object.assign({},DEF)}
+ if(!Array.isArray(st.names)||st.names.length!==MEMBERS)st.names=Array(MEMBERS).fill("");}
+function save(){try{localStorage.setItem("kitchenShift",JSON.stringify(st))}catch(e){}}
+load();
+
+const pad=n=>String(n).padStart(2,"0");
+const key=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parse=s=>{const[a,b,c]=s.split("-").map(Number);return new Date(a,b-1,c)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const wdOf=d=>(d.getDay()+6)%7; // 0=Mon
+const md=d=>(d.getMonth()+1)+"/"+d.getDate();
+const nameOf=i=>st.names[i]&&st.names[i].trim()?st.names[i].trim():String(i+1);
+
+function defaultStart(){const t=new Date();let d=new Date(t.getFullYear(),t.getMonth(),16);if(d<=t)d=new Date(t.getFullYear(),t.getMonth()+1,16);return key(d)}
+if(!st.start)st.start=defaultStart();
+function defaultEnd(s){const d=parse(s);return key(new Date(d.getFullYear(),d.getMonth()+1,d.getDate()-1))}
+if(!st.end||st.end<st.start)st.end=defaultEnd(st.start);
+
+function periodDays(){const s=parse(st.start);const e=parse(st.end);const out=[];for(let d=new Date(s);d<=e;d=addDays(d,1))out.push(new Date(d));return out}
+function prevDays(){const s=parse(st.start);const out=[];for(let i=7;i>=1;i--)out.push(addDays(s,-i));return out}
+
+// ---------- UI: period ----------
+const $=id=>document.getElementById(id);
+$("startDate").value=st.start;
+$("endDate").value=st.end;
+$("startDate").addEventListener("change",e=>{if(e.target.value){st.start=e.target.value;st.end=defaultEnd(st.start);$("endDate").value=st.end;save();renderAll()}});
+$("endDate").addEventListener("change",e=>{const v=e.target.value;if(!v)return;const n=Math.round((parse(v)-parse(st.start))/86400000)+1;
+ if(n<7||n>62){e.target.value=st.end;$("periodInfo").innerHTML="<span class='ng'>期間は7日〜62日の間で選んでください。</span>";setTimeout(renderPeriod,2500);return}
+ st.end=v;save();renderAll()});
+function getsudo(){const e=parse(st.end);let y=e.getFullYear(),m=e.getMonth()+1;if(e.getDate()>15){m++;if(m>12){m=1;y++}}return {y,m,k:y+"-"+pad(m)}}
+function offMonth(){const g=getsudo();const v=st.offByMonth&&st.offByMonth[g.k];return (typeof v==="number"&&v>0)?v:null}
+function scaledOff(D){return {reg:offMonth()||Math.round(9*D/30),min:Math.round(st.off7min*D/30),max:Math.round(Math.max(st.off7min,st.off7max)*D/30)}}
+function renderPeriod(){const ds=periodDays();const o=scaledOff(ds.length);const g=getsudo();
+ $("periodInfo").textContent=md(ds[0])+"（"+WD[wdOf(ds[0])]+"）〜 "+md(ds[ds.length-1])+"（"+WD[wdOf(ds[ds.length-1])]+"） 全"+ds.length+"日";
+ $("getsudoLabel").textContent=(g.y!==ds[0].getFullYear()||g.y!==new Date().getFullYear()?g.y+"年":"")+g.m+"月度";
+ const v=offMonth();$("offMonth").value=v||"";
+ const mw=ds.filter(d=>wdOf(d)<3).length;const tight=v&&v*2<mw?"<br><span class='ng'>休みが少ないため、月〜水に1と2が両方出勤する日が出ます（月〜水が"+mw+"日、1と2の休みは合わせて"+(v*2)+"日）。</span>":"";
+ $("offMonthHint").innerHTML=v?"7の休みは"+o.min+"〜"+o.max+"日で組みます。"+tight:"<span class='ng'>この月度の休み日数を入れてください。</span>（空欄のままだと"+o.reg+"日で組みます）"}
+$("offMonth").addEventListener("input",()=>{const v=parseInt($("offMonth").value,10);const g=getsudo();if(!st.offByMonth)st.offByMonth={};if(isNaN(v)||v<1)delete st.offByMonth[g.k];else st.offByMonth[g.k]=v;save();
+ const o=scaledOff(periodDays().length);$("offMonthHint").innerHTML=offMonth()?"7の休みは"+o.min+"〜"+o.max+"日で組みます。":"<span class='ng'>この月度の休み日数を入れてください。</span>"});
+
+// ---------- UI: names & settings ----------
+function renderNames(){const box=$("names");box.innerHTML="";for(let i=0;i<MEMBERS;i++){const l=document.createElement("label");l.innerHTML="<span>"+(i+1)+"</span>";const inp=document.createElement("input");inp.type="text";inp.value=st.names[i];inp.placeholder=String(i+1);inp.addEventListener("input",()=>{st.names[i]=inp.value;save();renderHope();renderPrev()});l.appendChild(inp);box.appendChild(l)}}
+["off7min","off7max","run12","run35","minB"].forEach(k=>{const el=$(k);el.value=st[k];el.addEventListener("change",()=>{const v=parseInt(el.value,10);if(!isNaN(v)){st[k]=v;save();renderPeriod()}})});
+
+function headRow(days,extraCls){let h="<tr><th class='nm'></th>";days.forEach(d=>{const w=wdOf(d);const c=w===6?"sun":w===5?"sat":"";h+="<th class='"+c+"'>"+md(d)+"<br>"+WD[w]+"</th>"});return h+"</tr>"}
+
+// ---------- UI: hope grid ----------
+function renderHope(){const days=periodDays();const t=$("hopeGrid");let h=headRow(days);
+ for(let p=0;p<MEMBERS;p++){h+="<tr><td class='nm'>"+escapeHtml(nameOf(p))+"</td>";days.forEach(d=>{const k=key(d);const v=st.hope[p+":"+k];const w=wdOf(d);const cls="cell"+(v===2?" w":v?" x":"")+(w<3&&v!==2?" mw":"");h+="<td class='"+cls+"' data-p='"+p+"' data-k='"+k+"'>"+(v===2?"出":v?"×":"")+"</td>"});h+="</tr>"}
+ t.innerHTML=h}
+let hopeMode=1;
+function setMode(m){hopeMode=m;$("modeX").classList.toggle("on",m===1);$("modeW").classList.toggle("on",m===2);$("modeE").classList.toggle("on",m===0)}
+$("modeX").addEventListener("click",()=>setMode(1));$("modeW").addEventListener("click",()=>setMode(2));$("modeE").addEventListener("click",()=>setMode(0));
+$("hopeGrid").addEventListener("click",e=>{const td=e.target.closest("td.cell");if(!td)return;const k=td.dataset.p+":"+td.dataset.k;const v=st.hope[k];
+ if(hopeMode===0||v===hopeMode)delete st.hope[k];else st.hope[k]=hopeMode;save();
+ const nv=st.hope[k];const w=wdOf(parse(td.dataset.k));td.className="cell"+(nv===2?" w":nv?" x":"")+(w<3&&nv!==2?" mw":"");td.textContent=nv===2?"出":nv?"×":""});
+$("clearHope").addEventListener("click",()=>{const days=periodDays().map(key);Object.keys(st.hope).forEach(k=>{if(days.includes(k.split(":")[1]))delete st.hope[k]});save();renderHope()});
+
+// ---------- UI: previous grid ----------
+const PREV_MEMBERS=[0,1,2,3,4,6];
+function renderPrev(){const days=prevDays();const t=$("prevGrid");let h=headRow(days);
+ PREV_MEMBERS.forEach(p=>{h+="<tr><td class='nm'>"+escapeHtml(nameOf(p))+"</td>";days.forEach(d=>{const k=key(d);const v=st.prev[p+":"+k]||"";h+="<td class='cell' data-p='"+p+"' data-k='"+k+"'>"+v+"</td>"});h+="</tr>"});
+ t.innerHTML=h}
+$("prevGrid").addEventListener("click",e=>{const td=e.target.closest("td.cell");if(!td)return;const k=td.dataset.p+":"+td.dataset.k;const cur=st.prev[k]||"";const nx=PREV_CYCLE[(PREV_CYCLE.indexOf(cur)+1)%PREV_CYCLE.length];if(nx)st.prev[k]=nx;else delete st.prev[k];save();td.textContent=nx});
+$("clearPrev").addEventListener("click",()=>{const days=prevDays().map(key);Object.keys(st.prev).forEach(k=>{if(days.includes(k.split(":")[1]))delete st.prev[k]});save();renderPrev();$("photoStatus").textContent=""});
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function renderAll(){renderPeriod();renderHope();renderPrev()}
+renderNames();renderAll();
+
+// ---------- photo reading (Claude) ----------
+let sampleApi=null;
+(async()=>{try{if(!window.claude||!window.claude.use)return;const s=await window.claude.use("sample");if(!s)return;let lim=null;try{lim=await s.limits()}catch(e){}
+ if(lim&&lim.images===false)return;sampleApi=s;$("photoLabel").classList.remove("hidden")}catch(e){}})();
+function readPrompt(){const days=prevDays();const labels=days.map(d=>md(d)+"("+WD[wdOf(d)]+")");
+ return "これはホテル厨房の手書きシフト表の写真です。表の上に日付と曜日の見出しがあり、左の名前欄は隠されていることがあります。\n"+
+ "行は上から順に：メンバー1〜5（主にBの行）、空き行、メンバー6（月火だけAが書かれる行）、空き行、メンバー7（主にBの行）、メンバー8（主にAの行）です。空き行は数えないでください。\n"+
+ "次の7日分の列だけを読み取ってください："+labels.join("、")+"。\n"+
+ "各マスは次のどれかで答えてください：\"B\"＝B、\"Ⓑ\"＝丸で囲まれたB、\"A\"＝A、\"／\"＝斜線や×（休み）、\"\"＝空欄。\n"+
+ "メンバー1,2,3,4,5,7について、古い日付から順に7個ずつの配列で、JSONだけを出力してください。説明は不要です。\n"+
+ "形式：{\"1\":[7個],\"2\":[7個],\"3\":[7個],\"4\":[7個],\"5\":[7個],\"7\":[7個]}\n"+
+ "写真にその日付の列が無い場合は、その列を\"?\"にしてください。"}
+function applyPrevText(text){const days=prevDays();
+  const m=String(text||"").replace(/[“”]/g,'"').match(/\{[\s\S]*\}/);if(!m)throw new Error("{ } で囲まれた答えが見つかりません");
+  const obj=JSON.parse(m[0]);let n=0,unk=0;
+  PREV_MEMBERS.forEach(p=>{const arr=obj[String(p+1)];if(!Array.isArray(arr))return;days.forEach((d,i)=>{let v=String(arr[i]==null?"":arr[i]).trim();
+   if(v==="?"){unk++;return}
+   if(/^[Ⓑⓑ]$|^\(B\)$|^○B$|^B○$/.test(v))v="Ⓑ";else if(/^[BＢ]$/.test(v))v="B";else if(/^[AＡ]$/.test(v))v="A";else if(/^[\/／×xX✕]$/.test(v))v="／";else v="";
+   const k=p+":"+key(d);if(v)st.prev[k]=v;else delete st.prev[k];n++})});
+  if(!n)throw new Error("メンバーの行が見つかりません");
+  save();renderPrev();
+  return "<span class='ok'>読み取りました。</span>内容を確認して、違うマスはタップで直してください。"+(unk?"（写真に無かった日付が"+unk+"マスあります）":"")}
+$("photo").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!sampleApi)return;
+ $("photoStatus").textContent="写真を読み取り中…（少し時間がかかります）";
+ try{const res=await sampleApi(readPrompt(),{images:[f],modelTier:"complex"});
+  $("photoStatus").innerHTML=applyPrevText(res.text);
+ }catch(err){const msg=err&&err.code==="not_granted"?"写真の読み取りが許可されませんでした。":err&&err.code==="rate_limited"?"混み合っています。少し時間をおいて試してください。":"読み取りに失敗しました（"+escapeHtml(err&&err.message||String(err))+"）。";
+  $("photoStatus").innerHTML="<span class='ng'>"+msg+"</span>マスをタップして手入力もできます。"}});
+
+function copyText(t){const ta=document.createElement("textarea");ta.value=t;ta.setAttribute("readonly","");ta.style.cssText="position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px";document.body.appendChild(ta);
+ ta.focus();ta.select();ta.setSelectionRange(0,t.length);let ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();return ok}
+$("copyPrompt").addEventListener("click",async()=>{const t=readPrompt();let ok=false;
+ try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);ok=true}}catch(e){}
+ if(!ok)ok=copyText(t);
+ const m=$("copyMsg");
+ if(ok){m.className="copied";m.textContent="✓ 指示文をコピーしました"}else{m.className="ng";m.textContent="コピーできませんでした。下の欄の文を長押しでコピーしてください";$("pasteBox").value=t}
+ clearTimeout(m._t);m._t=setTimeout(()=>{m.textContent=""},4000)});
+$("applyPaste").addEventListener("click",()=>{try{$("pasteStatus").innerHTML=applyPrevText($("pasteBox").value);$("pasteBox").value=""}catch(err){$("pasteStatus").innerHTML="<span class='ng'>取り込めませんでした（"+escapeHtml(err.message||String(err))+"）。</span>AIの答えの { から } までを全部貼り付けてください。"}});
+
+// ---------- solver (Web Worker) ----------
+const workerSrc=`
+function rng(seed){let s=seed>>>0||1;return()=>{s^=s<<13;s>>>=0;s^=s>>>17;s^=s<<5;s>>>=0;return s/4294967296}}
+self.onmessage=function(ev){const c=ev.data;const D=c.D,wd=c.wd;
+ // person index: 0-4 = members1-5, 5 = member7
+ const P=6, mem=[0,1,2,3,4,6];
+ const hopeOff=[];for(let k=0;k<P;k++)hopeOff.push(c.hope[mem[k]]);
+ const fixA7=c.fixA7;
+ const fixedOn=[];for(let k=0;k<P;k++){const a=new Array(D).fill(false);if(k===5)for(let i=0;i<D;i++)if(fixA7[i])a[i]=true;for(let i=0;i<D;i++)if(c.force[mem[k]][i]&&!hopeOff[k][i])a[i]=true;fixedOn.push(a)}
+ const lim=k=>k<2?c.run12:c.run35;
+ function score(S){let s=0;
+  for(let i=0;i<D;i++){let regs=0;for(let k=0;k<5;k++)regs+=S[k][i];const b=regs+(S[5][i]&&!fixA7[i]?1:0);const w=wd[i];
+   const one2=S[0][i]+S[1][i];
+   if(w<3){if(one2!==1)s+=1000;s+=(b-c.minB)*(b-c.minB)*30}else{if(one2<1)s+=1000;if(b<c.minB+1)s+=(c.minB+1-b)*80}
+   if(S[3][i]+S[4][i]<1)s+=1000;if(b<c.minB)s+=1000*(c.minB-b)}
+  for(let k=0;k<P;k++){const row=S[k];let n=0;for(let i=0;i<D;i++)if(!row[i])n++;
+   if(k<5){if(n!==c.offReg)s+=1000*Math.abs(n-c.offReg)}else{if(n<c.off7min)s+=1000*(c.off7min-n);if(n>c.off7max)s+=1000*(n-c.off7max)}
+   for(let i=0;i<D;i++){if(hopeOff[k][i]&&row[i])s+=1000;if(fixedOn[k][i]&&!row[i])s+=1000}
+   const pr=c.carry[k];
+   let i=0;while(i<D){if(!row[i]){let j=i;while(j<D&&!row[j])j++;let L=j-i;const leftWork=i===0?pr.prevRun>0:true;if(i===0)L+=pr.prevOff;
+     if(L===1&&leftWork&&j<D)s+=150;if(L>=3)s+=30*(L-2);i=j}else i++}
+   if(k<5){let off=0;for(let a=0;a<D;a++){if(!row[a])off++;if(a>=10&&!row[a-10])off--;if(a>=9&&off<=1)s+=300}}
+   let run=row[0]?pr.prevRun:0;const L2=lim(k);
+   for(let i=0;i<D;i++){run=row[i]?run+1:0;if(run>L2)s+=2000;if(k>=2&&run>L2-1)s+=300}}
+  return s}
+ function makanai(S,allowShort){
+  const cap=Math.ceil(D/5);const rid=[];
+  for(let k=0;k<5;k++){const ids=[];let r=-1;
+   for(let i=0;i<D;i++){if(S[k][i]&&(i===0||!S[k][i-1]))r++;ids.push(S[k][i]?r:-1)}rid.push(ids)}
+  const last=[],rc={},cnt=[0,0,0,0,0],short=[0,0,0,0,0],mk=new Array(D).fill(-1);
+  for(let k=0;k<5;k++){last.push(c.carry[k].mkAgo==null?-99:-c.carry[k].mkAgo);if(c.carry[k].prevRun>0&&S[k][0])rc[k+":0"]=c.carry[k].runMk}
+  let nodes=0;
+  function go(i){if(i===D)return true;if(++nodes>200000)return false;
+   const w=[];for(let k=0;k<5;k++)if(S[k][i])w.push(k);
+   w.sort((a,b)=>cnt[a]-cnt[b]||last[a]-last[b]);
+   for(const k of w){const g=i-last[k];if(g<2)continue;const sh=g===2;if(sh&&(!allowShort||short[k]>=1))continue;if(cnt[k]>=cap)continue;
+    const kk=k+":"+rid[k][i];if((rc[kk]||0)>=2)continue;
+    mk[i]=k;cnt[k]++;const ol=last[k];last[k]=i;rc[kk]=(rc[kk]||0)+1;if(sh)short[k]++;
+    if(go(i+1))return true;
+    cnt[k]--;last[k]=ol;rc[kk]--;if(sh)short[k]--;mk[i]=-1}
+   return false}
+  return go(0)?{mk,cnt,short}:null}
+ const R=rng(c.seed);let best=null;
+ for(let t=0;t<c.trials;t++){
+  const S=[];for(let k=0;k<P;k++){const row=new Array(D).fill(1);const cand=[];for(let i=0;i<D;i++)if(!fixedOn[k][i]&&!hopeOff[k][i])cand.push(i);
+    const hs=[];for(let i=0;i<D;i++)if(hopeOff[k][i])hs.push(i);hs.forEach(i=>row[i]=0);
+    let need=(k<5?c.offReg:Math.round((c.off7min+c.off7max)/2))-hs.length;
+    while(need>0&&cand.length){const j=Math.floor(R()*cand.length);row[cand[j]]=0;cand.splice(j,1);need--}
+    S.push(row)}
+  let cur=score(S),T=50;
+  for(let it=0;it<c.iters;it++){const k=Math.floor(R()*P);
+   if(k===5&&R()<0.3){const a=Math.floor(R()*D);if(fixedOn[k][a]||hopeOff[k][a])continue;S[k][a]^=1;const n=score(S);if(n<=cur||R()<Math.exp((cur-n)/T))cur=n;else S[k][a]^=1}
+   else{const a=Math.floor(R()*D),b=Math.floor(R()*D);if(S[k][a]===S[k][b])continue;if(fixedOn[k][a]||fixedOn[k][b]||hopeOff[k][a]||hopeOff[k][b])continue;
+    S[k][a]^=1;S[k][b]^=1;const n=score(S);if(n<=cur||R()<Math.exp((cur-n)/T))cur=n;else{S[k][a]^=1;S[k][b]^=1}}
+   T=Math.max(0.5,T*0.9998);
+   if(it%20000===0)self.postMessage({type:"progress",v:(t+it/c.iters)/c.trials})}
+  let m=makanai(S,false);let usedShort=false;if(!m){m=makanai(S,true);usedShort=!!m}
+  const sc=cur+(m?0:100000)+(usedShort?50:0);
+  if(!best||sc<best.sc)best={sc,S:S.map(r=>r.slice()),m,raw:cur}
+ }
+ self.postMessage({type:"done",best})};
+`;
+const workerUrl=URL.createObjectURL(new Blob([workerSrc],{type:"text/javascript"}));
+let worker=null,lastResult=null,seedBump=0;
+
+function buildConfig(){const days=periodDays(),D=days.length,wd=days.map(wdOf);
+ const hope=[],force=[];for(let p=0;p<MEMBERS;p++){hope.push(days.map(d=>st.hope[p+":"+key(d)]===1));force.push(days.map(d=>st.hope[p+":"+key(d)]===2))}
+ // breakfast: Mon/Tue -> member6 (idx5), Wed-Sun -> member8 (idx7); if absent -> member7 (idx6)
+ const fixA7=[],bfIssue=[];
+ for(let i=0;i<D;i++){const des=wd[i]<2?5:7;if(hope[des][i]){if(hope[6][i]){bfIssue.push(i);fixA7.push(false)}else fixA7.push(true)}else fixA7.push(false)}
+ // carry-over
+ const pd=prevDays();const mem=[0,1,2,3,4,6];
+ const carry=mem.map(p=>{const v=pd.map(d=>st.prev[p+":"+key(d)]||"");const work=x=>x==="B"||x==="Ⓑ"||x==="A";
+  let prevRun=0;for(let i=v.length-1;i>=0&&work(v[i]);i--)prevRun++;
+  let prevOff=0;if(prevRun===0)for(let i=v.length-1;i>=0&&!work(v[i]);i--)prevOff++;
+  let mkAgo=null;for(let i=v.length-1;i>=0;i--)if(v[i]==="Ⓑ"){mkAgo=v.length-i;break}
+  let runMk=0;for(let i=v.length-1;i>=v.length-prevRun;i--)if(v[i]==="Ⓑ")runMk++;
+  const known=v.some(x=>x);return {prevRun:known?prevRun:0,prevOff:known?Math.min(prevOff,2):0,mkAgo:known?mkAgo:null,runMk}});
+ return {days,cfg:{D,wd,hope,force,fixA7,carry,offReg:scaledOff(D).reg,off7min:scaledOff(D).min,off7max:scaledOff(D).max,run12:st.run12,run35:st.run35,minB:st.minB,trials:20,iters:150000,seed:(Date.now()+(++seedBump)*7919)>>>0},bfIssue}}
+
+function runSolver(){if(worker)worker.terminate();const {days,cfg,bfIssue}=buildConfig();
+ $("run").disabled=true;$("rerun").disabled=true;$("barWrap").classList.remove("hidden");$("bar").style.width="2%";$("runStatus").textContent="作成中…（スマホだと数十秒かかることがあります）";
+ worker=new Worker(workerUrl);
+ worker.onmessage=ev=>{const m=ev.data;if(m.type==="progress"){$("bar").style.width=Math.max(2,Math.round(m.v*100))+"%";return}
+  if(m.type==="done"){worker.terminate();worker=null;$("run").disabled=false;$("rerun").disabled=false;$("barWrap").classList.add("hidden");
+   lastResult=assemble(days,cfg,m.best,bfIssue);showResult(lastResult);$("runStatus").textContent=""}};
+ worker.onerror=e=>{$("run").disabled=false;$("rerun").disabled=false;$("barWrap").classList.add("hidden");$("runStatus").innerHTML="<span class='ng'>作成中にエラーが起きました："+escapeHtml(e.message||"")+"</span>"};
+ worker.postMessage(cfg)}
+$("run").addEventListener("click",runSolver);
+$("rerun").addEventListener("click",runSolver);
+
+function assemble(days,cfg,best,bfIssue){const D=days.length;const S=best.S,mk=best.m?best.m.mk:new Array(D).fill(-1);
+ const rows=[];
+ for(let k=0;k<5;k++)rows.push(days.map((d,i)=>S[k][i]?(mk[i]===k?"Ⓑ":"B"):(cfg.hope[k][i]?"×":"／")));
+ const r6=days.map((d,i)=>cfg.hope[5][i]?"×":(cfg.wd[i]<2||cfg.force[5][i]?"A":""));
+ const r7=days.map((d,i)=>cfg.hope[6][i]?"×":S[5][i]?(cfg.fixA7[i]?"A":"B"):"／");
+ const r8=days.map((d,i)=>cfg.hope[7][i]?"×":(cfg.wd[i]<2&&!cfg.force[7][i]?"／":"A"));
+ const all=[rows[0],rows[1],rows[2],rows[3],rows[4],r6,r7,r8];
+ return {days,cfg,all,best,bfIssue}}
+
+function checks(res){const {days,cfg,all,best,bfIssue}=res;const D=days.length;const out=[];const work=x=>x==="B"||x==="Ⓑ"||x==="A";
+ const add=(ok,txt)=>out.push({ok,txt});
+ let v12=[],vfss=[],v45=[],vB=[],vBf=[];
+ for(let i=0;i<D;i++){const w=cfg.wd[i];const a=work(all[0][i]),b=work(all[1][i]);
+  if(w<3&&(a+b)!==1)v12.push(i);if(w>=4&&!(a||b))vfss.push(i);if(!(work(all[3][i])||work(all[4][i])))v45.push(i);
+  let nb=0;[0,1,2,3,4,6].forEach(p=>{if(all[p][i]==="B"||all[p][i]==="Ⓑ")nb++});if(nb<cfg.minB)vB.push(i);
+  let na=0;[5,6,7].forEach(p=>{if(all[p][i]==="A")na++});if(na<1)vBf.push(i)}
+ const ds=arr=>arr.map(i=>md(days[i])).join("・");
+ add(!v12.length,"月〜水は1か2のどちらか1人だけ出勤"+(v12.length?"（守れない日："+ds(v12)+"）":""));
+ add(!vfss.length,"金土日は1か2が必ず出勤"+(vfss.length?"（守れない日："+ds(vfss)+"）":""));
+ add(!v45.length,"4か5は毎日どちらか出勤"+(v45.length?"（守れない日："+ds(v45)+"）":""));
+ add(!vB.length,"B（日勤）は毎日"+cfg.minB+"人以上"+(vB.length?"（足りない日："+ds(vB)+"）":""));
+ add(!vBf.length,"朝食番Aは毎日1人"+(vBf.length?"（いない日："+ds(vBf)+"）":""));
+ // runs & offs
+ const labels=[0,1,2,3,4,6];const runInfo=[],offInfo=[],single=[];let runNg=[];
+ labels.forEach((p,k)=>{let run=work(all[p][0])?cfg.carry[k].prevRun:0,mx=0;for(let i=0;i<D;i++){run=work(all[p][i])?run+1:0;mx=Math.max(mx,run)}
+  const lim=k<2?cfg.run12:cfg.run35;if(mx>lim)runNg.push(nameOf(p)+"："+mx+"連勤");runInfo.push(nameOf(p)+"="+mx);
+  const offs=all[p].filter(x=>!work(x)).length;offInfo.push(nameOf(p)+"="+offs);
+  for(let i=1;i<D-1;i++)if(!work(all[p][i])&&work(all[p][i-1])&&work(all[p][i+1]))single.push(nameOf(p)+" "+md(days[i]))});
+ add(!runNg.length,"連勤上限（1・2は"+cfg.run12+"日、3〜5・7は"+cfg.run35+"日）　最大連勤："+runInfo.join("、")+(runNg.length?"（超過："+runNg.join("、")+"）":""));
+ const offBad=labels.some((p,k)=>{const o=all[p].filter(x=>!work(x)).length;return k<5?o!==cfg.offReg:(o<cfg.off7min||o>cfg.off7max)});
+ add(!offBad,"休みの日数："+offInfo.join("、"));
+ // hope
+ let hopeNg=[];for(let p=0;p<MEMBERS;p++)for(let i=0;i<D;i++)if(cfg.hope[p][i]&&work(all[p][i]))hopeNg.push(nameOf(p)+" "+md(days[i]));
+ add(!hopeNg.length,"希望休はすべて休み"+(hopeNg.length?"（入らなかった："+hopeNg.join("、")+"）":""));
+ let fN=0,fNg=[];for(let p=0;p<MEMBERS;p++)for(let i=0;i<D;i++)if(cfg.force[p][i]){fN++;if(!work(all[p][i]))fNg.push(nameOf(p)+" "+md(days[i]))}
+ if(fN)add(!fNg.length,"出勤指定（"+fN+"件）はすべて出勤"+(fNg.length?"（守れなかった："+fNg.join("、")+"）":""));
+ if(best.m){const c=best.m.cnt.map((n,k)=>nameOf(k)+"="+n).join("、");const sh=best.m.short.reduce((a,b)=>a+b,0);
+  add(true,"まかない当番："+c+(sh?"（中1日を"+sh+"回使用）":"（全員中2日以上）")+"・連勤中2回まで")}
+ else add(false,"まかない当番を条件どおりに割り振れませんでした（もう一度作成してください）");
+ if(single.length)out.push({ok:null,txt:"単発の休み："+single.join("、")});
+ if(bfIssue.length)out.push({ok:false,txt:"朝食番の6・8と7が同時に希望休の日があります："+ds(bfIssue)});
+ return out}
+
+let pngBlob=null,xlsxBlob=null;
+function makeXlsx(res){const {days,all}=res;
+ const dates=days.map(d=>{const w=wdOf(d);return{d:d.getDate(),m:d.getMonth()+1,w:WD[w],mw:w<3}});
+ const R=p=>({name:nameOf(p),cells:all[p],count:p!==5,mk:p<5});
+ const rows=[R(0),R(1),R(2),R(3),R(4),null,R(5),null,R(6),R(7)];
+ const s0=md(days[0]),s1=md(days[days.length-1]);
+ return buildXlsx({title:days[0].getFullYear()+" キッチン シフト表　"+s0+"〜"+s1,sheetName:(days[0].getMonth()+1)+"月"+days[0].getDate()+"日〜"+(days[days.length-1].getMonth()+1)+"月"+days[days.length-1].getDate()+"日",dates,rows,
+  legend:["A＝朝食番　B＝日勤　Ⓑ＝まかない当番　／＝休み　×＝希望休"]})}
+function showResult(res){$("resultCard").classList.remove("hidden");
+ const cv=drawImage(res);pngBlob=null;xlsxBlob=null;
+ cv.toBlob(b=>{if(lastResult===res){pngBlob=b;$("resultImg").src=URL.createObjectURL(b)}},"image/png");
+ try{xlsxBlob=makeXlsx(res)}catch(e){}
+ const ul=$("checks");ul.innerHTML="";checks(res).forEach(c=>{const li=document.createElement("li");li.innerHTML=(c.ok===true?"<span class='ok'>✓</span> ":c.ok===false?"<span class='ng'>⚠</span> ":"・ ")+escapeHtml(c.txt);ul.appendChild(li)});
+ $("resultCard").scrollIntoView({behavior:"smooth",block:"start"})}
+
+// ---------- image ----------
+function drawImage(res){const {days,all}=res;const D=days.length;
+ const x0=40,y0=130,nameW=150,cw=85,hdrH=56,rh=64,nrows=16;const x1=x0+nameW+cw*D;const W=x1+300;
+ const yb=y0+2*hdrH,ybot=yb+rh*nrows,H=ybot+110;
+ const cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+ const F='"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif';
+ g.fillStyle="#fff";g.fillRect(0,0,W,H);g.fillStyle="#000";g.strokeStyle="#000";g.textBaseline="middle";
+ const text=(s,x,y,sz,bold,al)=>{g.font=(bold?"700 ":"400 ")+sz+"px "+F;g.textAlign=al||"center";g.fillText(s,x,y)};
+ const line=(a,b,c,d,w)=>{g.lineWidth=w;g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke()};
+ text(String(days[0].getFullYear()),x0+10,y0-45,44,false,"left");
+ text("キッチン　シフト表",x0+nameW+10,y0-45,44,true,"left");
+ text((days[0].getMonth()+1)+"月",(x0+x1)/2,y0-45,44,true);
+ line(x0+nameW,y0-8,x1-60,y0-8,3);
+ g.lineWidth=4;g.strokeRect(x0,y0-80,x1-x0,ybot-(y0-80));
+ line(x0,y0-12,x0+nameW,y0-12,3);
+ [y0,y0+hdrH,yb].forEach(y=>line(x0,y,x1,y,3));
+ for(let k=1;k<=nrows;k++)line(x0,yb+rh*k,x1,yb+rh*k,2);
+ line(x0+nameW,y0-80,x0+nameW,ybot,3);
+ for(let i=1;i<D;i++)line(x0+nameW+cw*i,y0,x0+nameW+cw*i,ybot,2);
+ days.forEach((d,i)=>{const cx=x0+nameW+cw*i+cw/2;text(String(d.getDate()),cx,y0+hdrH/2,36,true);text(WD[wdOf(d)],cx,y0+hdrH*1.5,30,false)});
+ const layout=[0,1,2,3,4,null,5,null,6,7];
+ layout.forEach((p,r)=>{if(p===null)return;const yt=yb+rh*r,cy=yt+rh/2;g.fillStyle="#555";
+  const nm=nameOf(p);let sz=34;g.font="400 "+sz+"px "+F;while(g.measureText(nm).width>nameW-16&&sz>14){sz--;g.font="400 "+sz+"px "+F}
+  text(nm,x0+nameW/2,cy,sz,false);g.fillStyle="#000";
+  all[p].forEach((c,i)=>{const xl=x0+nameW+cw*i,cx=xl+cw/2;
+   if(c==="B"||c==="A")text(c,cx,cy+2,46,false);
+   else if(c==="Ⓑ"){text("B",cx,cy+2,46,false);g.lineWidth=3;g.beginPath();g.ellipse(cx,cy,30,26,0,0,Math.PI*2);g.stroke()}
+   else if(c==="／")line(xl+6,yt+rh-6,xl+cw-6,yt+6,3);
+   else if(c==="×"){line(xl+8,yt+8,xl+cw-8,yt+rh-8,3);line(xl+8,yt+rh-8,xl+cw-8,yt+8,3)}})});
+ text("A＝朝食番　B＝日勤　Ⓑ＝まかない当番　／＝休み　×＝希望休",x0,ybot+50,32,false,"left");
+ return cv}
+
+// ---------- export ----------
+// ---- minimal xlsx writer (no external library) ----
+function buildXlsx(o){
+ // o: {title, sheetName, dates:[{d:Number,m:Number,w:String,mw:Bool}], rows:[{name, cells:[...]}|null], legend:[String]}
+ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+ const col=n=>{let s="";n++;while(n){const r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26)}return s};
+ const D=o.dates.length;const rowsXml=[];
+ const cStr=(ref,v,s)=>'<c r="'+ref+'" t="inlineStr" s="'+s+'"><is><t>'+esc(v)+'</t></is></c>';
+ const cEmpty=(ref,s)=>'<c r="'+ref+'" s="'+s+'"/>';
+ const cF=(ref,f,s)=>'<c r="'+ref+'" s="'+s+'"><f>'+esc(f)+'</f></c>';
+ const lastCol=col(D);const offCol=col(D+1),mkCol=col(D+2);
+ rowsXml.push('<row r="1" ht="24" customHeight="1">'+cStr("A1",o.title,1)+'</row>');
+ let r2='<row r="2" ht="28" customHeight="1">'+cStr("A2","",2),r3='<row r="3" ht="24" customHeight="1">'+cStr("A3","",2);
+ o.dates.forEach((x,i)=>{const c=col(i+1);r2+=cStr(c+"2",(x.d===1||i===0?x.m+"/":"")+x.d,x.mw?8:2);r3+=cStr(c+"3",x.w,x.mw?8:2)});
+ r2+=cStr(offCol+"2","休日数",2)+cStr(mkCol+"2","まかない",2);r3+=cStr(offCol+"3","",2)+cStr(mkCol+"3","",2);
+ rowsXml.push(r2+'</row>',r3+'</row>');
+ let rn=4;
+ o.rows.forEach(row=>{let x='<row r="'+rn+'" ht="40" customHeight="1">';
+  if(!row){x+=cEmpty("A"+rn,3);for(let i=0;i<D;i++)x+=cEmpty(col(i+1)+rn,o.dates[i].mw?4:3);x+=cEmpty(offCol+rn,3)+cEmpty(mkCol+rn,3)}
+  else{x+=cStr("A"+rn,row.name,5);
+   row.cells.forEach((v,i)=>{const ref=col(i+1)+rn,mw=o.dates[i].mw;const s=v==="×"?(mw?7:6):v==="Ⓑ"?(mw?10:9):(mw?4:3);x+=v?cStr(ref,v,s):cEmpty(ref,s)});
+   const rg="B"+rn+":"+lastCol+rn;
+   x+=row.count?cF(offCol+rn,'COUNTIF('+rg+',"／")+COUNTIF('+rg+',"×")',3):cEmpty(offCol+rn,3);
+   x+=row.mk?cF(mkCol+rn,'COUNTIF('+rg+',"Ⓑ")',3):cEmpty(mkCol+rn,3)}
+  rowsXml.push(x+'</row>');rn++});
+ rn++;
+ (o.legend||[]).forEach(t=>{rowsXml.push('<row r="'+rn+'">'+cStr("A"+rn,t,0)+'</row>');rn++});
+ const cols='<cols><col min="1" max="1" width="10" customWidth="1"/><col min="2" max="'+(D+1)+'" width="5.2" customWidth="1"/><col min="'+(D+2)+'" max="'+(D+3)+'" width="8" customWidth="1"/></cols>';
+ const sheet='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView workbookViewId="0"><pane xSplit="1" ySplit="3" topLeftCell="B4" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/>'+cols+'<sheetData>'+rowsXml.join("")+'</sheetData><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.2" footer="0.2"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="1"/></worksheet>';
+ const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+  '<fonts count="6"><font><sz val="11"/><name val="游ゴシック"/><family val="3"/><charset val="128"/></font><font><b/><sz val="14"/><name val="游ゴシック"/><family val="3"/><charset val="128"/></font><font><b/><sz val="11"/><name val="游ゴシック"/><family val="3"/><charset val="128"/></font><font><b/><sz val="12"/><color rgb="FFB5462F"/><name val="游ゴシック"/><family val="3"/><charset val="128"/></font><font><sz val="13"/><name val="游ゴシック"/><family val="3"/><charset val="128"/></font><font><b/><sz val="15"/><name val="游ゴシック"/><family val="3"/><charset val="128"/></font></fonts>'+
+  '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE6EEF6"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F3F3"/><bgColor indexed="64"/></patternFill></fill></fills>'+
+  '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border></borders>'+
+  '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'+
+  '<cellXfs count="11">'+
+  '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'+
+  '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'+
+  '<xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '<xf numFmtId="0" fontId="4" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '<xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '<xf numFmtId="0" fontId="5" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '<xf numFmtId="0" fontId="5" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'+
+  '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+ const files=[
+  ["[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
+  ["_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+  ["xl/workbook.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="'+esc(o.sheetName)+'" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>'],
+  ["xl/_rels/workbook.xml.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+  ["xl/styles.xml",styles],
+  ["xl/worksheets/sheet1.xml",sheet]];
+ return zipStore(files)}
+function zipStore(files){
+ const enc=new TextEncoder();const T=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;T.push(c>>>0)}
+ const crc=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0};
+ const parts=[],cent=[];let off=0;
+ const u16=v=>[v&255,(v>>>8)&255],u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+ files.forEach(([name,txt])=>{const nb=enc.encode(name),db=enc.encode(txt),c=crc(db);
+  const lh=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0)]);
+  parts.push(lh,nb,db);
+  cent.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(c),...u32(db.length),...u32(db.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+  off+=lh.length+nb.length+db.length});
+ const cs=cent.reduce((a,b)=>a+b.length,0);
+ const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cs),...u32(off),...u16(0)]);
+ return new Blob([...parts,...cent,end],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})}
+
+let downloadsApi=null;
+const standalone=(()=>{try{return window.top===window.self&&!window.claude}catch(e){return false}})();
+if(standalone){const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+ downloadsApi={save:async({filename,data})=>{
+  if(isIOS&&navigator.canShare){const f=new File([data],filename,{type:data.type});if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f]});return}catch(e){if(e&&e.name==="AbortError")return}}}
+  const u=URL.createObjectURL(data);const a=document.createElement("a");a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000)}};
+ $("dlBtn").classList.remove("hidden");$("xlsxBtn").classList.remove("hidden")}
+(async()=>{try{if(!window.claude||!window.claude.use)return;const d=await window.claude.use("downloads");if(d){downloadsApi=d;$("dlBtn").classList.remove("hidden");$("xlsxBtn").classList.remove("hidden")}}catch(e){}})();
+async function saveFile(btn,label,filename,getBlob){if(!lastResult||!downloadsApi)return;btn.disabled=true;btn.textContent="準備中…";
+ try{let b=getBlob();for(let t=0;!b&&t<50;t++){await new Promise(r=>setTimeout(r,100));b=getBlob()}if(!b)throw new Error("no file");
+  if(!standalone)btn.textContent="確認画面を待っています…";await downloadsApi.save({filename,data:b})}
+ catch(e){if(!(e&&/cancel|declin|abort/i.test(String(e.code||e.message||""))))$("runStatus").textContent=label+"を保存できませんでした。"}
+ finally{btn.disabled=false;btn.textContent=label}}
+$("dlBtn").addEventListener("click",()=>saveFile($("dlBtn"),"画像をダウンロード","shift_"+key(lastResult.days[0])+".png",()=>pngBlob));
+
+$("xlsxBtn").addEventListener("click",()=>saveFile($("xlsxBtn"),"Excelで保存","shift_"+key(lastResult.days[0])+".xlsx",()=>xlsxBlob||(xlsxBlob=makeXlsx(lastResult))));
+$("copyBtn").addEventListener("click",async()=>{if(!lastResult)return;const {days,all}=lastResult;
+ let t="\t"+days.map(md).join("\t")+"\n\t"+days.map(d=>WD[wdOf(d)]).join("\t")+"\n";all.forEach((r,p)=>{t+=nameOf(p)+"\t"+r.join("\t")+"\n"});
+ try{await navigator.clipboard.writeText(t);$("copyBtn").textContent="コピーしました"}catch(e){$("copyBtn").textContent="コピーできませんでした"}
+ setTimeout(()=>$("copyBtn").textContent="表をテキストでコピー",2000)});
+})();
+</script>
+</body>
+</html>
