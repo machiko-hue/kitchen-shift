@@ -135,7 +135,7 @@ details summary{cursor:pointer;font-weight:600}
 <label class="row">3〜5・7の連勤上限 <input type="number" id="run35" min="4" max="8"> 日（できれば1日少なく）</label>
 <label class="row">B（日勤）の最低人数 <input type="number" id="minB" min="1" max="6"> 人</label>
 </div>
-<div class="hint" style="margin-top:8px">そのほかのルール（固定）：月〜水は1か2のどちらか1人だけ出勤／金土日は1〜5全員出勤（4・5は日曜のみ休み可、希望休を除く）／4か5は毎日どちらか出勤／朝食番Aは月火＝6、水〜日＝8、8が休みの日は7がA／まかない当番は均等・中2日以上空ける（中1日は1人月1回まで）・1回の連勤で2回まで／できるだけ2連休／日曜に4・5のどちらかが休みの日は、4・5はまかない当番にしない</div>
+<div class="hint" style="margin-top:8px">そのほかのルール（固定）：月〜水は1か2のどちらか1人だけ出勤／金土日は1〜5全員出勤（4・5はどうしても無理な時だけ日曜休み可、希望休を除く）／4か5は毎日どちらか出勤／朝食番Aは月火＝6、水〜日＝8、8が休みの日は7がA／まかない当番は均等・中2日以上空ける（中1日は1人月1回まで）・1回の連勤で2回まで／できるだけ2連休／日曜に4・5のどちらかが休みの日は、4・5はまかない当番にしない</div>
 </details>
 </section>
 
@@ -197,15 +197,18 @@ $("endDate").addEventListener("change",e=>{const v=e.target.value;if(!v)return;c
  st.end=v;save();renderAll()});
 function getsudo(){const e=parse(st.end);let y=e.getFullYear(),m=e.getMonth()+1;if(e.getDate()>15){m++;if(m>12){m=1;y++}}return {y,m,k:y+"-"+pad(m)}}
 function offMonth(){const g=getsudo();const v=st.offByMonth&&st.offByMonth[g.k];return (typeof v==="number"&&v>0)?v:null}
-function offTargets(carry){const base=scaledOff(0);return {reg:carry.slice(0,5).map(c=>Math.max(0,base.reg-c.mOff)),min:Math.max(0,base.min-carry[5].mOff),max:Math.max(0,base.max-carry[5].mOff)}}
-function scaledOff(D){const L=Math.round((parse(st.end)-gsStart())/86400000)+1;D=L;return {reg:offMonth()||Math.round(9*D/30),min:Math.round(st.off7min*D/30),max:Math.round(Math.max(st.off7min,st.off7max)*D/30)}}
+function gsEnd(){const g=getsudo();return new Date(g.y,g.m-1,15)}
+function periodFrac(){const s=parse(st.start),e=parse(st.end),ge=gsEnd();const D=Math.round((e-s)/86400000)+1;const rem=Math.round((ge-s)/86400000)+1;return e<ge&&rem>0?Math.min(1,D/rem):1}
+function offTargets(carry){const base=scaledOff(0),f=periodFrac();const r=x=>Math.max(0,Math.round(x*f));
+ return {reg:carry.slice(0,5).map(c=>r(base.reg-c.mOff)),min:r(base.min-carry[5].mOff),max:Math.max(r(base.min-carry[5].mOff),r(base.max-carry[5].mOff))}}
+function scaledOff(D){const ge=parse(st.end)>gsEnd()?parse(st.end):gsEnd();D=Math.round((ge-gsStart())/86400000)+1;return {reg:offMonth()||Math.round(9*D/30),min:Math.round(st.off7min*D/30),max:Math.round(Math.max(st.off7min,st.off7max)*D/30)}}
 function renderPeriod(){const ds=periodDays();const o=scaledOff(ds.length);const g=getsudo();
  $("periodInfo").textContent=md(ds[0])+"（"+WD[wdOf(ds[0])]+"）〜 "+md(ds[ds.length-1])+"（"+WD[wdOf(ds[ds.length-1])]+"） 全"+ds.length+"日";
  $("getsudoLabel").textContent=(g.y!==ds[0].getFullYear()||g.y!==new Date().getFullYear()?g.y+"年":"")+g.m+"月度";
  const v=offMonth();$("offMonth").value=v||"";
  const mw=ds.filter(d=>wdOf(d)<3).length;const tight=v&&v*2<mw?"<br><span class='ng'>休みが少ないため、月〜水に1と2が両方出勤する日が出ます（月〜水が"+mw+"日、1と2の休みは合わせて"+(v*2)+"日）。</span>":"";
- const gsd=gsStart();const partial=parse(st.start)>gsd;const pnote=partial?"<br>月度の途中（"+md(gsd)+"〜）から作るので、"+md(gsd)+"〜"+md(addDays(parse(st.start),-1))+"の休みを②に入れてください。入れた休みの分を引いて組みます。":"";
- $("offMonthHint").innerHTML=v?"休みは月度（"+md(gsd)+"〜"+md(parse(st.end))+"）の合計です。7の休みは"+o.min+"〜"+o.max+"日。"+tight+pnote:"<span class='ng'>この月度の休み日数を入れてください。</span>（空欄のままだと"+o.reg+"日で組みます）"}
+ const gsd=gsStart();const partial=parse(st.start)>gsd;const fr=periodFrac();const pnote=partial?"<br>月度の途中（"+md(gsd)+"〜）から作るので、"+md(gsd)+"〜"+md(addDays(parse(st.start),-1))+"の休みを②に入れてください。入れた休みの分を引いて組みます（基本は月度の初日から作るのがおすすめです）。":"";
+ $("offMonthHint").innerHTML=v?"休みは月度（"+md(gsd)+"〜"+md(gsEnd())+"）の合計です。7の休みは"+o.min+"〜"+o.max+"日。"+tight+pnote+(fr<1?"<br><span class='ng'>期間が月度の終わり（"+md(gsEnd())+"）より前に終わるので、残りの休みを日数で割り振って組みます（今回はおよそ"+Math.round(fr*100)+"%）。できるだけ月度の終わりまでまとめて作るのがおすすめです。</span>":""):"<span class='ng'>この月度の休み日数を入れてください。</span>（空欄のままだと"+o.reg+"日で組みます）"}
 $("offMonth").addEventListener("input",()=>{const v=parseInt($("offMonth").value,10);const g=getsudo();if(!st.offByMonth)st.offByMonth={};if(isNaN(v)||v<1)delete st.offByMonth[g.k];else st.offByMonth[g.k]=v;save();
  const o=scaledOff(periodDays().length);$("offMonthHint").innerHTML=offMonth()?"7の休みは"+o.min+"〜"+o.max+"日で組みます。":"<span class='ng'>この月度の休み日数を入れてください。</span>"});
 
@@ -296,7 +299,7 @@ self.onmessage=function(ev){const c=ev.data;const D=c.D,wd=c.wd;
   for(let i=0;i<D;i++){let regs=0;for(let k=0;k<5;k++)regs+=S[k][i];const b=regs+(S[5][i]&&!fixA7[i]?1:0);const w=wd[i];
    const one2=S[0][i]+S[1][i];
    if(w<3){if(one2!==1)s+=1000;t+=(b-c.minB)*(b-c.minB)*30}else{if(w>=4&&one2<1)s+=1000;if(b<c.minB+1)t+=(c.minB+1-b)*80}
-   if(w>=4)for(let k=0;k<5;k++)if(!S[k][i]&&!hopeOff[k][i]&&!(w===6&&k>=3))s+=1000;
+   if(w>=4)for(let k=0;k<5;k++)if(!S[k][i]&&!hopeOff[k][i])s+=(w===6&&k>=3)?500:1000;
    if(S[3][i]+S[4][i]<1)s+=1000;if(b<c.minB)s+=1000*(c.minB-b)}
   for(let k=0;k<P;k++){const row=S[k];let n=0;for(let i=0;i<D;i++)if(!row[i])n++;
    if(k<5){if(n!==c.offReg[k])s+=1000*Math.abs(n-c.offReg[k])}else{if(n<c.off7min)s+=1000*(c.off7min-n);if(n>c.off7max)s+=1000*(n-c.off7max)}
@@ -327,7 +330,7 @@ self.onmessage=function(ev){const c=ev.data;const D=c.D,wd=c.wd;
   return go(0)?{mk,cnt,short}:null}
  const R=rng(c.seed);let best=null;
  for(let t=0;t<c.trials;t++){
-  const S=[];for(let k=0;k<P;k++){const row=new Array(D).fill(1);const cand=[];for(let i=0;i<D;i++)if(!fixedOn[k][i]&&!hopeOff[k][i]&&!(k<5&&wd[i]>=4&&!(wd[i]===6&&k>=3)))cand.push(i);
+  const S=[];for(let k=0;k<P;k++){const row=new Array(D).fill(1);const cand=[];for(let i=0;i<D;i++)if(!fixedOn[k][i]&&!hopeOff[k][i]&&!(k<5&&wd[i]>=4))cand.push(i);
     const hs=[];for(let i=0;i<D;i++)if(hopeOff[k][i])hs.push(i);hs.forEach(i=>row[i]=0);
     let need=(k<5?c.offReg[k]:Math.round((c.off7min+c.off7max)/2))-hs.length;
     while(need>0&&cand.length){const j=Math.floor(R()*cand.length);row[cand[j]]=0;cand.splice(j,1);need--}
@@ -394,7 +397,9 @@ function checks(res){const {days,cfg,all,best,bfIssue}=res;const D=days.length;c
   let na=0;[5,6,7].forEach(p=>{if(all[p][i]==="A")na++});if(na<1)vBf.push(i)}
  const ds=arr=>arr.map(i=>md(days[i])).join("・");
  add(!v12.length,"月〜水は1か2のどちらか1人だけ出勤"+(v12.length?"（守れない日："+ds(v12)+"）":""));
- add(!vfss.length,"金土日は1〜5全員出勤（4・5は日曜のみ休み可、希望休を除く）"+(vfss.length?"（守れない日："+ds(vfss)+"）":""));
+ add(!vfss.length,"金土日は1〜5全員出勤（4・5はどうしても無理な時だけ日曜休み可、希望休を除く）"+(vfss.length?"（守れない日："+ds(vfss)+"）":""));
+ const sun45=[];for(let i=0;i<D;i++)if(cfg.wd[i]===6)[3,4].forEach(p=>{if(!work(all[p][i])&&!cfg.hope[p][i])sun45.push(nameOf(p)+" "+md(days[i]))});
+ if(sun45.length)out.push({ok:null,txt:"4・5の日曜休み（どうしても組めないため）："+sun45.join("、")});
  add(!v45.length,"4か5は毎日どちらか出勤"+(v45.length?"（守れない日："+ds(v45)+"）":""));
  add(!vB.length,"B（日勤）は毎日"+cfg.minB+"人以上"+(vB.length?"（足りない日："+ds(vB)+"）":""));
  add(!vBf.length,"朝食番Aは毎日1人"+(vBf.length?"（いない日："+ds(vBf)+"）":""));
@@ -447,7 +452,7 @@ function drawImage(res){const {days,all}=res;const D=days.length;
  const line=(a,b,c,d,w)=>{g.lineWidth=w;g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke()};
  text(String(days[0].getFullYear()),x0+10,y0-45,44,false,"left");
  text("キッチン　シフト表",x0+nameW+10,y0-45,44,true,"left");
- text(getsudo().m+"月",(x0+x1)/2,y0-45,44,true);
+ {g.font="700 44px "+F;const tw=g.measureText("キッチン　シフト表").width;const mx=Math.max((x0+x1)/2,x0+nameW+10+tw+60+g.measureText("12月").width/2);text(getsudo().m+"月",mx,y0-45,44,true)}
  line(x0+nameW,y0-8,x1-60,y0-8,3);
  g.lineWidth=4;g.strokeRect(x0,y0-80,x1-x0,ybot-(y0-80));
  line(x0,y0-12,x0+nameW,y0-12,3);
