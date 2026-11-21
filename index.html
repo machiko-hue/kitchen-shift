@@ -92,7 +92,7 @@ details summary{cursor:pointer;font-weight:600}
 </section>
 
 <section class="card">
-<h2><span class="num">2</span>前回シフトの最後の7日間 <span class="pill">任意</span></h2>
+<h2><span class="num">2</span>今回より前の勤務 <span class="pill">任意</span></h2>
 <div class="hint">連勤やまかない当番の間隔を、前回から続けて計算するために使います。写真を読み込むか、マスをタップして入力してください（空欄は休み扱い）。</div>
 <div class="btns" id="photoBox">
   <div class="hidden filebtn" id="photoLabel"><span>📷 前回シフトの写真を読み込む</span><input type="file" id="photo" accept="image/*" aria-label="前回シフトの写真を読み込む"></div>
@@ -135,7 +135,7 @@ details summary{cursor:pointer;font-weight:600}
 <label class="row">3〜5・7の連勤上限 <input type="number" id="run35" min="4" max="8"> 日（できれば1日少なく）</label>
 <label class="row">B（日勤）の最低人数 <input type="number" id="minB" min="1" max="6"> 人</label>
 </div>
-<div class="hint" style="margin-top:8px">そのほかのルール（固定）：月〜水は1か2のどちらか1人だけ出勤／金土日は1か2が必ず出勤／4か5は毎日どちらか出勤／朝食番Aは月火＝6、水〜日＝8、8が休みの日は7がA／まかない当番は均等・中2日以上空ける（中1日は1人月1回まで）・1回の連勤で2回まで／できるだけ2連休</div>
+<div class="hint" style="margin-top:8px">そのほかのルール（固定）：月〜水は1か2のどちらか1人だけ出勤／金土日は1〜5全員出勤（4・5は日曜のみ休み可、希望休を除く）／4か5は毎日どちらか出勤／朝食番Aは月火＝6、水〜日＝8、8が休みの日は7がA／まかない当番は均等・中2日以上空ける（中1日は1人月1回まで）・1回の連勤で2回まで／できるだけ2連休／日曜に4・5のどちらかが休みの日は、4・5はまかない当番にしない</div>
 </details>
 </section>
 
@@ -184,7 +184,8 @@ function defaultEnd(s){const d=parse(s);return key(new Date(d.getFullYear(),d.ge
 if(!st.end||st.end<st.start)st.end=defaultEnd(st.start);
 
 function periodDays(){const s=parse(st.start);const e=parse(st.end);const out=[];for(let d=new Date(s);d<=e;d=addDays(d,1))out.push(new Date(d));return out}
-function prevDays(){const s=parse(st.start);const out=[];for(let i=7;i>=1;i--)out.push(addDays(s,-i));return out}
+function gsStart(){const g=getsudo();return new Date(g.y,g.m-2,16)}
+function prevDays(){const s=parse(st.start);let n=7;const gd=Math.round((s-gsStart())/86400000);if(gd>n)n=gd;const out=[];for(let i=n;i>=1;i--)out.push(addDays(s,-i));return out}
 
 // ---------- UI: period ----------
 const $=id=>document.getElementById(id);
@@ -196,13 +197,15 @@ $("endDate").addEventListener("change",e=>{const v=e.target.value;if(!v)return;c
  st.end=v;save();renderAll()});
 function getsudo(){const e=parse(st.end);let y=e.getFullYear(),m=e.getMonth()+1;if(e.getDate()>15){m++;if(m>12){m=1;y++}}return {y,m,k:y+"-"+pad(m)}}
 function offMonth(){const g=getsudo();const v=st.offByMonth&&st.offByMonth[g.k];return (typeof v==="number"&&v>0)?v:null}
-function scaledOff(D){return {reg:offMonth()||Math.round(9*D/30),min:Math.round(st.off7min*D/30),max:Math.round(Math.max(st.off7min,st.off7max)*D/30)}}
+function offTargets(carry){const base=scaledOff(0);return {reg:carry.slice(0,5).map(c=>Math.max(0,base.reg-c.mOff)),min:Math.max(0,base.min-carry[5].mOff),max:Math.max(0,base.max-carry[5].mOff)}}
+function scaledOff(D){const L=Math.round((parse(st.end)-gsStart())/86400000)+1;D=L;return {reg:offMonth()||Math.round(9*D/30),min:Math.round(st.off7min*D/30),max:Math.round(Math.max(st.off7min,st.off7max)*D/30)}}
 function renderPeriod(){const ds=periodDays();const o=scaledOff(ds.length);const g=getsudo();
  $("periodInfo").textContent=md(ds[0])+"（"+WD[wdOf(ds[0])]+"）〜 "+md(ds[ds.length-1])+"（"+WD[wdOf(ds[ds.length-1])]+"） 全"+ds.length+"日";
  $("getsudoLabel").textContent=(g.y!==ds[0].getFullYear()||g.y!==new Date().getFullYear()?g.y+"年":"")+g.m+"月度";
  const v=offMonth();$("offMonth").value=v||"";
  const mw=ds.filter(d=>wdOf(d)<3).length;const tight=v&&v*2<mw?"<br><span class='ng'>休みが少ないため、月〜水に1と2が両方出勤する日が出ます（月〜水が"+mw+"日、1と2の休みは合わせて"+(v*2)+"日）。</span>":"";
- $("offMonthHint").innerHTML=v?"7の休みは"+o.min+"〜"+o.max+"日で組みます。"+tight:"<span class='ng'>この月度の休み日数を入れてください。</span>（空欄のままだと"+o.reg+"日で組みます）"}
+ const gsd=gsStart();const partial=parse(st.start)>gsd;const pnote=partial?"<br>月度の途中（"+md(gsd)+"〜）から作るので、"+md(gsd)+"〜"+md(addDays(parse(st.start),-1))+"の休みを②に入れてください。入れた休みの分を引いて組みます。":"";
+ $("offMonthHint").innerHTML=v?"休みは月度（"+md(gsd)+"〜"+md(parse(st.end))+"）の合計です。7の休みは"+o.min+"〜"+o.max+"日。"+tight+pnote:"<span class='ng'>この月度の休み日数を入れてください。</span>（空欄のままだと"+o.reg+"日で組みます）"}
 $("offMonth").addEventListener("input",()=>{const v=parseInt($("offMonth").value,10);const g=getsudo();if(!st.offByMonth)st.offByMonth={};if(isNaN(v)||v<1)delete st.offByMonth[g.k];else st.offByMonth[g.k]=v;save();
  const o=scaledOff(periodDays().length);$("offMonthHint").innerHTML=offMonth()?"7の休みは"+o.min+"〜"+o.max+"日で組みます。":"<span class='ng'>この月度の休み日数を入れてください。</span>"});
 
@@ -246,10 +249,10 @@ let sampleApi=null;
 function readPrompt(){const days=prevDays();const labels=days.map(d=>md(d)+"("+WD[wdOf(d)]+")");
  return "これはホテル厨房の手書きシフト表の写真です。表の上に日付と曜日の見出しがあり、左の名前欄は隠されていることがあります。\n"+
  "行は上から順に：メンバー1〜5（主にBの行）、空き行、メンバー6（月火だけAが書かれる行）、空き行、メンバー7（主にBの行）、メンバー8（主にAの行）です。空き行は数えないでください。\n"+
- "次の7日分の列だけを読み取ってください："+labels.join("、")+"。\n"+
+ "次の"+days.length+"日分の列だけを読み取ってください："+labels.join("、")+"。\n"+
  "各マスは次のどれかで答えてください：\"B\"＝B、\"Ⓑ\"＝丸で囲まれたB、\"A\"＝A、\"／\"＝斜線や×（休み）、\"\"＝空欄。\n"+
- "メンバー1,2,3,4,5,7について、古い日付から順に7個ずつの配列で、JSONだけを出力してください。説明は不要です。\n"+
- "形式：{\"1\":[7個],\"2\":[7個],\"3\":[7個],\"4\":[7個],\"5\":[7個],\"7\":[7個]}\n"+
+ "メンバー1,2,3,4,5,7について、古い日付から順に"+days.length+"個ずつの配列で、JSONだけを出力してください。説明は不要です。\n"+
+ "形式：{\"1\":[…],\"2\":[…],\"3\":[…],\"4\":[…],\"5\":[…],\"7\":[…]}\n"+
  "写真にその日付の列が無い場合は、その列を\"?\"にしてください。"}
 function applyPrevText(text){const days=prevDays();
   const m=String(text||"").replace(/[“”]/g,'"').match(/\{[\s\S]*\}/);if(!m)throw new Error("{ } で囲まれた答えが見つかりません");
@@ -288,21 +291,23 @@ self.onmessage=function(ev){const c=ev.data;const D=c.D,wd=c.wd;
  const fixA7=c.fixA7;
  const fixedOn=[];for(let k=0;k<P;k++){const a=new Array(D).fill(false);if(k===5)for(let i=0;i<D;i++)if(fixA7[i])a[i]=true;for(let i=0;i<D;i++)if(c.force[mem[k]][i]&&!hopeOff[k][i])a[i]=true;fixedOn.push(a)}
  const lim=k=>k<2?c.run12:c.run35;
- function score(S){let s=0;
+ let SW=1;
+ function score(S){let s=0,t=0;
   for(let i=0;i<D;i++){let regs=0;for(let k=0;k<5;k++)regs+=S[k][i];const b=regs+(S[5][i]&&!fixA7[i]?1:0);const w=wd[i];
    const one2=S[0][i]+S[1][i];
-   if(w<3){if(one2!==1)s+=1000;s+=(b-c.minB)*(b-c.minB)*30}else{if(one2<1)s+=1000;if(b<c.minB+1)s+=(c.minB+1-b)*80}
+   if(w<3){if(one2!==1)s+=1000;t+=(b-c.minB)*(b-c.minB)*30}else{if(w>=4&&one2<1)s+=1000;if(b<c.minB+1)t+=(c.minB+1-b)*80}
+   if(w>=4)for(let k=0;k<5;k++)if(!S[k][i]&&!hopeOff[k][i]&&!(w===6&&k>=3))s+=1000;
    if(S[3][i]+S[4][i]<1)s+=1000;if(b<c.minB)s+=1000*(c.minB-b)}
   for(let k=0;k<P;k++){const row=S[k];let n=0;for(let i=0;i<D;i++)if(!row[i])n++;
-   if(k<5){if(n!==c.offReg)s+=1000*Math.abs(n-c.offReg)}else{if(n<c.off7min)s+=1000*(c.off7min-n);if(n>c.off7max)s+=1000*(n-c.off7max)}
+   if(k<5){if(n!==c.offReg[k])s+=1000*Math.abs(n-c.offReg[k])}else{if(n<c.off7min)s+=1000*(c.off7min-n);if(n>c.off7max)s+=1000*(n-c.off7max)}
    for(let i=0;i<D;i++){if(hopeOff[k][i]&&row[i])s+=1000;if(fixedOn[k][i]&&!row[i])s+=1000}
    const pr=c.carry[k];
    let i=0;while(i<D){if(!row[i]){let j=i;while(j<D&&!row[j])j++;let L=j-i;const leftWork=i===0?pr.prevRun>0:true;if(i===0)L+=pr.prevOff;
-     if(L===1&&leftWork&&j<D)s+=150;if(L>=3)s+=30*(L-2);i=j}else i++}
-   if(k<5){let off=0;for(let a=0;a<D;a++){if(!row[a])off++;if(a>=10&&!row[a-10])off--;if(a>=9&&off<=1)s+=300}}
+     if(L===1&&leftWork&&j<D)t+=150;if(L>=3)t+=30*(L-2);i=j}else i++}
+   if(k<5){let off=0;for(let a=0;a<D;a++){if(!row[a])off++;if(a>=10&&!row[a-10])off--;if(a>=9&&off<=1)t+=300}}
    let run=row[0]?pr.prevRun:0;const L2=lim(k);
-   for(let i=0;i<D;i++){run=row[i]?run+1:0;if(run>L2)s+=2000;if(k>=2&&run>L2-1)s+=300}}
-  return s}
+   for(let i=0;i<D;i++){run=row[i]?run+1:0;if(run>L2)s+=2000;if(k>=2&&run>L2-1)t+=300}}
+  return s+t*SW}
  function makanai(S,allowShort){
   const cap=Math.ceil(D/5);const rid=[];
   for(let k=0;k<5;k++){const ids=[];let r=-1;
@@ -311,7 +316,7 @@ self.onmessage=function(ev){const c=ev.data;const D=c.D,wd=c.wd;
   for(let k=0;k<5;k++){last.push(c.carry[k].mkAgo==null?-99:-c.carry[k].mkAgo);if(c.carry[k].prevRun>0&&S[k][0])rc[k+":0"]=c.carry[k].runMk}
   let nodes=0;
   function go(i){if(i===D)return true;if(++nodes>200000)return false;
-   const w=[];for(let k=0;k<5;k++)if(S[k][i])w.push(k);
+   const w=[];const solo45=wd[i]===6&&S[3][i]+S[4][i]<2;for(let k=0;k<5;k++)if(S[k][i]&&!(solo45&&k>=3))w.push(k);
    w.sort((a,b)=>cnt[a]-cnt[b]||last[a]-last[b]);
    for(const k of w){const g=i-last[k];if(g<2)continue;const sh=g===2;if(sh&&(!allowShort||short[k]>=1))continue;if(cnt[k]>=cap)continue;
     const kk=k+":"+rid[k][i];if((rc[kk]||0)>=2)continue;
@@ -322,17 +327,17 @@ self.onmessage=function(ev){const c=ev.data;const D=c.D,wd=c.wd;
   return go(0)?{mk,cnt,short}:null}
  const R=rng(c.seed);let best=null;
  for(let t=0;t<c.trials;t++){
-  const S=[];for(let k=0;k<P;k++){const row=new Array(D).fill(1);const cand=[];for(let i=0;i<D;i++)if(!fixedOn[k][i]&&!hopeOff[k][i])cand.push(i);
+  const S=[];for(let k=0;k<P;k++){const row=new Array(D).fill(1);const cand=[];for(let i=0;i<D;i++)if(!fixedOn[k][i]&&!hopeOff[k][i]&&!(k<5&&wd[i]>=4&&!(wd[i]===6&&k>=3)))cand.push(i);
     const hs=[];for(let i=0;i<D;i++)if(hopeOff[k][i])hs.push(i);hs.forEach(i=>row[i]=0);
-    let need=(k<5?c.offReg:Math.round((c.off7min+c.off7max)/2))-hs.length;
+    let need=(k<5?c.offReg[k]:Math.round((c.off7min+c.off7max)/2))-hs.length;
     while(need>0&&cand.length){const j=Math.floor(R()*cand.length);row[cand[j]]=0;cand.splice(j,1);need--}
     S.push(row)}
-  let cur=score(S),T=50;
+  SW=0.05;let cur=score(S),T=c.T0||800;const TF=Math.pow(0.5/(c.T0||800),1/c.iters);
   for(let it=0;it<c.iters;it++){const k=Math.floor(R()*P);
    if(k===5&&R()<0.3){const a=Math.floor(R()*D);if(fixedOn[k][a]||hopeOff[k][a])continue;S[k][a]^=1;const n=score(S);if(n<=cur||R()<Math.exp((cur-n)/T))cur=n;else S[k][a]^=1}
    else{const a=Math.floor(R()*D),b=Math.floor(R()*D);if(S[k][a]===S[k][b])continue;if(fixedOn[k][a]||fixedOn[k][b]||hopeOff[k][a]||hopeOff[k][b])continue;
     S[k][a]^=1;S[k][b]^=1;const n=score(S);if(n<=cur||R()<Math.exp((cur-n)/T))cur=n;else{S[k][a]^=1;S[k][b]^=1}}
-   T=Math.max(0.5,T*0.9998);
+   T=Math.max(0.5,T*TF);if(it===Math.floor(c.iters*0.5)){SW=1;cur=score(S)}
    if(it%20000===0)self.postMessage({type:"progress",v:(t+it/c.iters)/c.trials})}
   let m=makanai(S,false);let usedShort=false;if(!m){m=makanai(S,true);usedShort=!!m}
   const sc=cur+(m?0:100000)+(usedShort?50:0);
@@ -355,8 +360,10 @@ function buildConfig(){const days=periodDays(),D=days.length,wd=days.map(wdOf);
   let prevOff=0;if(prevRun===0)for(let i=v.length-1;i>=0&&!work(v[i]);i--)prevOff++;
   let mkAgo=null;for(let i=v.length-1;i>=0;i--)if(v[i]==="Ⓑ"){mkAgo=v.length-i;break}
   let runMk=0;for(let i=v.length-1;i>=v.length-prevRun;i--)if(v[i]==="Ⓑ")runMk++;
-  const known=v.some(x=>x);return {prevRun:known?prevRun:0,prevOff:known?Math.min(prevOff,2):0,mkAgo:known?mkAgo:null,runMk}});
- return {days,cfg:{D,wd,hope,force,fixA7,carry,offReg:scaledOff(D).reg,off7min:scaledOff(D).min,off7max:scaledOff(D).max,run12:st.run12,run35:st.run35,minB:st.minB,trials:20,iters:150000,seed:(Date.now()+(++seedBump)*7919)>>>0},bfIssue}}
+  const gs=gsStart();let mOff=0;pd.forEach((d,i)=>{if(d>=gs&&!work(v[i]))mOff++});
+  const known=v.some(x=>x);return {prevRun:known?prevRun:0,prevOff:known?Math.min(prevOff,2):0,mkAgo:known?mkAgo:null,runMk,mOff:known?mOff:0}});
+ const T=offTargets(carry);
+ return {days,cfg:{D,wd,hope,force,fixA7,carry,offReg:T.reg,off7min:T.min,off7max:T.max,run12:st.run12,run35:st.run35,minB:st.minB,trials:20,iters:150000,seed:(Date.now()+(++seedBump)*7919)>>>0},bfIssue}}
 
 function runSolver(){if(worker)worker.terminate();const {days,cfg,bfIssue}=buildConfig();
  $("run").disabled=true;$("rerun").disabled=true;$("barWrap").classList.remove("hidden");$("bar").style.width="2%";$("runStatus").textContent="作成中…（スマホだと数十秒かかることがあります）";
@@ -382,12 +389,12 @@ function checks(res){const {days,cfg,all,best,bfIssue}=res;const D=days.length;c
  const add=(ok,txt)=>out.push({ok,txt});
  let v12=[],vfss=[],v45=[],vB=[],vBf=[];
  for(let i=0;i<D;i++){const w=cfg.wd[i];const a=work(all[0][i]),b=work(all[1][i]);
-  if(w<3&&(a+b)!==1)v12.push(i);if(w>=4&&!(a||b))vfss.push(i);if(!(work(all[3][i])||work(all[4][i])))v45.push(i);
+  if(w<3&&(a+b)!==1)v12.push(i);if(w>=4&&[0,1,2,3,4].some(p=>!work(all[p][i])&&!cfg.hope[p][i]&&!(w===6&&p>=3)))vfss.push(i);if(!(work(all[3][i])||work(all[4][i])))v45.push(i);
   let nb=0;[0,1,2,3,4,6].forEach(p=>{if(all[p][i]==="B"||all[p][i]==="Ⓑ")nb++});if(nb<cfg.minB)vB.push(i);
   let na=0;[5,6,7].forEach(p=>{if(all[p][i]==="A")na++});if(na<1)vBf.push(i)}
  const ds=arr=>arr.map(i=>md(days[i])).join("・");
  add(!v12.length,"月〜水は1か2のどちらか1人だけ出勤"+(v12.length?"（守れない日："+ds(v12)+"）":""));
- add(!vfss.length,"金土日は1か2が必ず出勤"+(vfss.length?"（守れない日："+ds(vfss)+"）":""));
+ add(!vfss.length,"金土日は1〜5全員出勤（4・5は日曜のみ休み可、希望休を除く）"+(vfss.length?"（守れない日："+ds(vfss)+"）":""));
  add(!v45.length,"4か5は毎日どちらか出勤"+(v45.length?"（守れない日："+ds(v45)+"）":""));
  add(!vB.length,"B（日勤）は毎日"+cfg.minB+"人以上"+(vB.length?"（足りない日："+ds(vB)+"）":""));
  add(!vBf.length,"朝食番Aは毎日1人"+(vBf.length?"（いない日："+ds(vBf)+"）":""));
@@ -395,18 +402,20 @@ function checks(res){const {days,cfg,all,best,bfIssue}=res;const D=days.length;c
  const labels=[0,1,2,3,4,6];const runInfo=[],offInfo=[],single=[];let runNg=[];
  labels.forEach((p,k)=>{let run=work(all[p][0])?cfg.carry[k].prevRun:0,mx=0;for(let i=0;i<D;i++){run=work(all[p][i])?run+1:0;mx=Math.max(mx,run)}
   const lim=k<2?cfg.run12:cfg.run35;if(mx>lim)runNg.push(nameOf(p)+"："+mx+"連勤");runInfo.push(nameOf(p)+"="+mx);
-  const offs=all[p].filter(x=>!work(x)).length;offInfo.push(nameOf(p)+"="+offs);
+  const offs=all[p].filter(x=>!work(x)).length;const pm=cfg.carry[k].mOff;offInfo.push(nameOf(p)+"="+(pm?offs+"+前"+pm:offs));
   for(let i=1;i<D-1;i++)if(!work(all[p][i])&&work(all[p][i-1])&&work(all[p][i+1]))single.push(nameOf(p)+" "+md(days[i]))});
  add(!runNg.length,"連勤上限（1・2は"+cfg.run12+"日、3〜5・7は"+cfg.run35+"日）　最大連勤："+runInfo.join("、")+(runNg.length?"（超過："+runNg.join("、")+"）":""));
- const offBad=labels.some((p,k)=>{const o=all[p].filter(x=>!work(x)).length;return k<5?o!==cfg.offReg:(o<cfg.off7min||o>cfg.off7max)});
- add(!offBad,"休みの日数："+offInfo.join("、"));
+ const offBad=labels.some((p,k)=>{const o=all[p].filter(x=>!work(x)).length;return k<5?o!==cfg.offReg[k]:(o<cfg.off7min||o>cfg.off7max)});
+ add(!offBad,"休みの日数（月度内）："+offInfo.join("、")+(cfg.carry.some(c=>c.mOff)?"　※「前○」は②に入れた、この月度の今回より前の休み":""));
  // hope
  let hopeNg=[];for(let p=0;p<MEMBERS;p++)for(let i=0;i<D;i++)if(cfg.hope[p][i]&&work(all[p][i]))hopeNg.push(nameOf(p)+" "+md(days[i]));
  add(!hopeNg.length,"希望休はすべて休み"+(hopeNg.length?"（入らなかった："+hopeNg.join("、")+"）":""));
  let fN=0,fNg=[];for(let p=0;p<MEMBERS;p++)for(let i=0;i<D;i++)if(cfg.force[p][i]){fN++;if(!work(all[p][i]))fNg.push(nameOf(p)+" "+md(days[i]))}
  if(fN)add(!fNg.length,"出勤指定（"+fN+"件）はすべて出勤"+(fNg.length?"（守れなかった："+fNg.join("、")+"）":""));
  if(best.m){const c=best.m.cnt.map((n,k)=>nameOf(k)+"="+n).join("、");const sh=best.m.short.reduce((a,b)=>a+b,0);
-  add(true,"まかない当番："+c+(sh?"（中1日を"+sh+"回使用）":"（全員中2日以上）")+"・連勤中2回まで")}
+  add(true,"まかない当番："+c+(sh?"（中1日を"+sh+"回使用）":"（全員中2日以上）")+"・連勤中2回まで");
+  const bad45=[];for(let i=0;i<D;i++){const mk=best.m.mk[i];if(cfg.wd[i]===6&&(mk===3||mk===4)&&!(work(all[3][i])&&work(all[4][i])))bad45.push(md(days[i]))}
+  add(!bad45.length,"日曜に4・5のどちらかが休みの日は、4・5をまかない当番にしない"+(bad45.length?"（守れない日："+bad45.join("・")+"）":""))}
  else add(false,"まかない当番を条件どおりに割り振れませんでした（もう一度作成してください）");
  if(single.length)out.push({ok:null,txt:"単発の休み："+single.join("、")});
  if(bfIssue.length)out.push({ok:false,txt:"朝食番の6・8と7が同時に希望休の日があります："+ds(bfIssue)});
@@ -438,7 +447,7 @@ function drawImage(res){const {days,all}=res;const D=days.length;
  const line=(a,b,c,d,w)=>{g.lineWidth=w;g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke()};
  text(String(days[0].getFullYear()),x0+10,y0-45,44,false,"left");
  text("キッチン　シフト表",x0+nameW+10,y0-45,44,true,"left");
- text((days[0].getMonth()+1)+"月",(x0+x1)/2,y0-45,44,true);
+ text(getsudo().m+"月",(x0+x1)/2,y0-45,44,true);
  line(x0+nameW,y0-8,x1-60,y0-8,3);
  g.lineWidth=4;g.strokeRect(x0,y0-80,x1-x0,ybot-(y0-80));
  line(x0,y0-12,x0+nameW,y0-12,3);
